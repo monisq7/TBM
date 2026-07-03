@@ -1,8 +1,9 @@
 import streamlit as st
 import pandas as pd
 import pickle
+from database import save_prediction
 
-# Load model
+# ---------- Model ----------
 with open("mortality_prediction_model.pkl", "rb") as file:
     model = pickle.load(file)
 
@@ -54,6 +55,9 @@ Target: In-hospital Mortality
 
 st.sidebar.metric("Model Accuracy", "91.3%")
 st.sidebar.metric("AUC Score", "0.94")
+
+# Patient Name (not used by the model, only stored alongside the prediction)
+patient_name = st.text_input("Patient Name")
 
 # Inputs
 tab1, tab2 = st.tabs(["Basic Parameters", "Clinical Parameters"])
@@ -169,7 +173,15 @@ if st.button("Predict Mortality Risk"):
     """, unsafe_allow_html=True)
 
     with st.expander("Patient Summary"):
+        st.write(f"**Patient Name:** {patient_name.strip() if patient_name else 'Unnamed'}")
         st.write(input_data)
+
+    # ---------- Save to MongoDB ----------
+    saved, error = save_prediction(input_data, death_prob, risk, patient_name)
+    if saved:
+        st.toast("✅ Prediction saved to database", icon="💾")
+    else:
+        st.warning(f"⚠️ Could not save to database: {error}")
 
 # Footer
 st.markdown("---")
